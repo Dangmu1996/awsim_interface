@@ -24,7 +24,8 @@ using autoware_auto_vehicle_msgs::msg::HazardLightsCommand;
 
 struct Command
 {
-    bool hazard_indicator = false;
+    HazardLightsCommand hazard_light;
+    TurnIndicatorsCommand turn_light_indicator;
 };
 
 
@@ -37,35 +38,51 @@ class Joystick : public rclcpp::Node
             rclcpp::QoS durable_qos{1};
             durable_qos.transient_local();
             joy_sub_ = this->create_subscription<Joy>("joy", 10, std::bind(&Joystick::joyCB, this, _1));
-            haz_pub_ = this->create_publisher<HazardLightsCommand>("/control/command/hazard_lights_cmd", durable_qos);
+
+            hazard_light_pub_ = this->create_publisher<HazardLightsCommand>("/control/command/hazard_lights_cmd", durable_qos);
+            turn_indi_pub_ = this->create_publisher<TurnIndicatorsCommand>("/control/command/turn_indicators_cmd", durable_qos);
+
             timer_ = this->create_wall_timer(100ms, std::bind(&Joystick::timerCB, this));
         }
 
     private:
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::Subscription<Joy>::SharedPtr joy_sub_;
-        rclcpp::Publisher<HazardLightsCommand>::SharedPtr haz_pub_;
+
+        rclcpp::Publisher<HazardLightsCommand>::SharedPtr hazard_light_pub_;
+        rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr turn_indi_pub_;
         // rclcpp::QoS durable_qos{1};
 
         Command cmd_;
 
         void joyCB(const Joy &msg)
         {
-            if(msg.buttons[1] == 1)
-                cmd_.hazard_indicator = true;
+            if(msg.buttons[4] == 1 && msg.buttons[5] == 0)
+            {
+                cmd_.hazard_light.command=HazardLightsCommand::DISABLE;
+                cmd_.turn_light_indicator.command=TurnIndicatorsCommand::ENABLE_LEFT;
+            }
+            else if(msg.buttons[4]==0 && msg.buttons[5] == 1)
+            {
+                cmd_.hazard_light.command=HazardLightsCommand::DISABLE;
+                cmd_.turn_light_indicator.command=TurnIndicatorsCommand::ENABLE_RIGHT;
+            }
+            else if(msg.buttons[4]==0 && msg.buttons[5] == 0)
+            {
+                cmd_.hazard_light.command=HazardLightsCommand::DISABLE;
+                cmd_.turn_light_indicator.command=TurnIndicatorsCommand::DISABLE;
+            }
             else
-                cmd_.hazard_indicator = false;
+            {
+                cmd_.hazard_light.command=HazardLightsCommand::ENABLE;
+                cmd_.turn_light_indicator.command=TurnIndicatorsCommand::DISABLE;
+            }   
         }
 
         void timerCB()
         {
-            auto hz_light = HazardLightsCommand();
-            if(cmd_.hazard_indicator)
-                hz_light.command=HazardLightsCommand::ENABLE;
-            else
-                hz_light.command=HazardLightsCommand::DISABLE;
-
-            haz_pub_->publish(hz_light);
+            hazard_light_pub_->publish(cmd_.hazard_light);
+            turn_indi_pub_->publish(cmd_.turn_light_indicator);
         }
 };
 
