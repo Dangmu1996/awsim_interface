@@ -13,6 +13,10 @@
 #include "autoware_auto_vehicle_msgs/msg/hazard_lights_command.hpp"
 #include "autoware_auto_vehicle_msgs/msg/turn_indicators_command.hpp"
 
+#include "autoware_auto_vehicle_msgs/msg/gear_report.hpp"
+
+#include <iostream>
+
 using std::placeholders::_1;
 using namespace std::chrono_literals;
 
@@ -20,12 +24,14 @@ using sensor_msgs::msg::Joy;
 
 using autoware_auto_vehicle_msgs::msg::TurnIndicatorsCommand;
 using autoware_auto_vehicle_msgs::msg::HazardLightsCommand;
-
+using autoware_auto_vehicle_msgs::msg::GearReport;
+using autoware_auto_vehicle_msgs::msg::GearCommand;
 
 struct Command
 {
     HazardLightsCommand hazard_light;
     TurnIndicatorsCommand turn_light_indicator;
+    GearCommand gear_cmd;
 };
 
 
@@ -38,9 +44,13 @@ class Joystick : public rclcpp::Node
             rclcpp::QoS durable_qos{1};
             durable_qos.transient_local();
             joy_sub_ = this->create_subscription<Joy>("joy", 10, std::bind(&Joystick::joyCB, this, _1));
+            gear_sub_ = this->create_subscription<GearReport>("/vehicle/status/gear_status", 10, std::bind(&Joystick::gearCB, this, _1));
 
             hazard_light_pub_ = this->create_publisher<HazardLightsCommand>("/control/command/hazard_lights_cmd", durable_qos);
             turn_indi_pub_ = this->create_publisher<TurnIndicatorsCommand>("/control/command/turn_indicators_cmd", durable_qos);
+            
+            gear_pub_ = this->create_publisher<GearCommand>("/control/command/gear_cmd", durable_qos);
+            cmd_.gear_cmd.command=GearCommand::PARK;
 
             timer_ = this->create_wall_timer(100ms, std::bind(&Joystick::timerCB, this));
         }
@@ -48,9 +58,11 @@ class Joystick : public rclcpp::Node
     private:
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::Subscription<Joy>::SharedPtr joy_sub_;
+        rclcpp::Subscription<GearReport>::SharedPtr gear_sub_;
 
         rclcpp::Publisher<HazardLightsCommand>::SharedPtr hazard_light_pub_;
         rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr turn_indi_pub_;
+        rclcpp::Publisher<GearCommand>::SharedPtr gear_pub_;
         // rclcpp::QoS durable_qos{1};
 
         Command cmd_;
@@ -76,13 +88,35 @@ class Joystick : public rclcpp::Node
             {
                 cmd_.hazard_light.command=HazardLightsCommand::ENABLE;
                 cmd_.turn_light_indicator.command=TurnIndicatorsCommand::DISABLE;
-            }   
+            }
+
+            if(msg.buttons[1] == 1)
+            {
+                //gear down
+                cmd_.gear_cmd.command=GearCommand::DRIVE;
+            }
+            if(msg.buttons[0] ==1)
+            {
+                //gear up
+                cmd_.gear_cmd.command=GearCommand::PARK;
+            }
+            if(msg.buttons[2]==1)
+            {
+                cmd_.gear_cmd.command=GearCommand::REVERSE;
+            }
+
+        }
+
+        void gearCB(const GearReport &msg)
+        {
+            RCLCPP_INFO(this->get_logger(), "Gear: '%d'", msg.report);
         }
 
         void timerCB()
         {
             hazard_light_pub_->publish(cmd_.hazard_light);
             turn_indi_pub_->publish(cmd_.turn_light_indicator);
+            gear_pub_->publish(cmd_.gear_cmd);
         }
 };
 
