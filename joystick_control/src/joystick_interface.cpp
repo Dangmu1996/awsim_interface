@@ -17,6 +17,8 @@
 
 #include <iostream>
 
+#include "joystick_control/vehicle_cmd_filter.hpp"
+
 using std::placeholders::_1;
 using namespace std::chrono_literals;
 
@@ -63,12 +65,12 @@ class Joystick : public rclcpp::Node
         rclcpp::Publisher<HazardLightsCommand>::SharedPtr hazard_light_pub_;
         rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr turn_indi_pub_;
         rclcpp::Publisher<GearCommand>::SharedPtr gear_pub_;
-        // rclcpp::QoS durable_qos{1};
 
         Command cmd_;
 
         void joyCB(const Joy &msg)
         {
+            //Setting Light
             if(msg.buttons[4] == 1 && msg.buttons[5] == 0)
             {
                 cmd_.hazard_light.command=HazardLightsCommand::DISABLE;
@@ -90,20 +92,13 @@ class Joystick : public rclcpp::Node
                 cmd_.turn_light_indicator.command=TurnIndicatorsCommand::DISABLE;
             }
 
+            //Setting Gear
             if(msg.buttons[1] == 1)
-            {
-                //gear down
                 cmd_.gear_cmd.command=GearCommand::DRIVE;
-            }
             if(msg.buttons[0] ==1)
-            {
-                //gear up
                 cmd_.gear_cmd.command=GearCommand::PARK;
-            }
             if(msg.buttons[2]==1)
-            {
                 cmd_.gear_cmd.command=GearCommand::REVERSE;
-            }
 
         }
 

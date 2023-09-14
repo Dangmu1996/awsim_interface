@@ -15,8 +15,14 @@ find_package(autoware_auto_vehicle_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+add_library(vehicle_cmd_filter ./include/joystick_control/vehicle_cmd_filter.hpp ./include/vehicle_cmd_filter.cpp)
+ament_target_dependencies(vehicle_cmd_filter rclcpp autoware_auto_control_msgs)
+
+target_include_directories(vehicle_cmd_filter PUBLIC ./include)
+
 add_executable(joystick_interface ./src/joystick_interface.cpp)
 ament_target_dependencies(joystick_interface rclcpp sensor_msgs tier4_vehicle_msgs autoware_auto_control_msgs autoware_auto_vehicle_msgs)
+target_link_libraries(joystick_interface vehicle_cmd_filter)
 
 install(TARGETS
   joystick_interface
