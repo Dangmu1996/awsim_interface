@@ -37,10 +37,8 @@ public:
     void limitLongitudinalWithJerk(const double dt, AckermannControlCommand & input) const;
     void limitLateralWithLatAcc(const double dt, AckermannControlCommand & input) const;
     void limitLateralWithLatJerk(const double dt, AckermannControlCommand & input) const;
-    void limitActualSteerDiff(
-      const double current_steer_angle, AckermannControlCommand & input) const;
-    void filterAll(
-      const double dt, const double current_steer_angle, AckermannControlCommand & input) const;
+    void limitActualSteerDiff(const double current_steer_angle, AckermannControlCommand & input) const;
+    void filterAll(const double dt, const double current_steer_angle, AckermannControlCommand & input) const;
 private:
     VehicleCmdFilterParam param_;
     AckermannControlCommand prev_cmd_;
