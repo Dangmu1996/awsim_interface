@@ -12,4 +12,5 @@
       </geometry>
     </visual>
   </link>
+  <xacro:include filename="$(find awsim_sensor_kit_description)/urdf/sensors.xacro"/>
 </robot>
